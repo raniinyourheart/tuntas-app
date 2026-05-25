@@ -1,4 +1,9 @@
 import React, { useState } from "react";
+import { 
+  ArrowLeft, FileText, Search, Upload, X, 
+  Image, File, CheckCircle, Loader2, Send,
+  User, MessageSquare, Paperclip
+} from "lucide-react";
 
 interface PengaduanProps {
   onBackToHome: () => void;
@@ -65,9 +70,14 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
     }, 1500);
   };
 
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith("image/")) return <Image size={16} />;
+    return <File size={16} />;
+  };
+
   return (
     <div className="min-h-screen relative py-10 px-4 md:px-8">
-      {/* BACKGROUND IMAGE - OVERLAY LEBIH TERANG */}
+      {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-black/40 z-10"></div>
         {!imageError ? (
@@ -83,16 +93,14 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
       </div>
 
       <div className="max-w-5xl mx-auto relative z-20">
-        
-        {/* HEADER - TRANSPARAN */}
+        {/* HEADER */}
         <div className="bg-slate-600/80 backdrop-blur-sm text-white p-6 rounded-t-lg">
           <h1 className="text-2xl md:text-3xl font-bold leading-snug">
             Selamat Datang Di Transformasi Tata Kelola Organisasi:
             Aplikasi Pengelolaan Ketidaksesuaian dan Tindak Lanjut Polibatam
           </h1>
           <p className="mt-2 text-sm md:text-base">
-            Anda dapat memberi masukan, kritik dan/atau pengaduan terkait
-            polibatam secara online
+            Anda dapat memberi masukan, kritik dan/atau pengaduan terkait polibatam secara online
           </p>
           
           <div className="mt-3">
@@ -100,7 +108,8 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
               onClick={onBackToHome}
               className="text-white/80 hover:text-white text-sm flex items-center gap-1 transition-all duration-300 hover:underline"
             >
-              ← kembali ke beranda
+              <ArrowLeft size={14} />
+              kembali ke beranda
             </button>
           </div>
         </div>
@@ -111,30 +120,35 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
             onClick={handleResetForm}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center gap-2 shadow rounded transition-all duration-300"
           >
-            📝 Form Pengajuan
+            <FileText size={16} />
+            Form Pengajuan
           </button>
           <button 
             onClick={onNavigateToStatus}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 shadow rounded transition-all duration-300"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center gap-2 shadow rounded transition-all duration-300"
           >
-            🔍 Lihat Status Pengajuan
+            <Search size={16} />
+            Lihat Status Pengajuan
           </button>
         </div>
 
-        {/* FORM - DENGAN BACKGROUND PUTIH TRANSPARAN */}
+        {/* FORM */}
         <form onSubmit={handleSubmit}>
           <div className="border border-gray-300 mt-4 p-6 bg-white/95 backdrop-blur-sm rounded-b-lg shadow-xl">
             
             {/* INPUT STATUS */}
             <div className="flex flex-col sm:flex-row sm:items-center mb-6">
-              <label className="w-40 font-medium mb-2 sm:mb-0">Input Status :</label>
+              <label className="w-40 font-medium mb-2 sm:mb-0 flex items-center gap-2">
+                <User size={16} />
+                Input Status :
+              </label>
               <select 
                 value={formData.status}
                 onChange={handleStatusChange}
                 className="border border-gray-300 p-2 w-full sm:w-64 bg-white rounded focus:outline-none focus:border-blue-500"
                 required
               >
-                <option value="">pilih status anda </option>
+                <option value="">pilih status anda</option>
                 <option value="Mahasiswa">Mahasiswa</option>
                 <option value="Dosen">Dosen</option>
                 <option value="Masyarakat Umum">Masyarakat Umum</option>
@@ -143,7 +157,8 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
 
             {/* TEXTAREA */}
             <div className="mb-6">
-              <label className="block mb-2 font-medium">
+              <label className="block mb-2 font-medium flex items-center gap-2">
+                <MessageSquare size={16} />
                 Masukan/Saran :
               </label>
               <textarea
@@ -157,12 +172,13 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
 
             {/* UPLOAD GAMBAR */}
             <div className="mb-6">
-              <label className="block mb-2 font-medium">
+              <label className="block mb-2 font-medium flex items-center gap-2">
+                <Paperclip size={16} />
                 Tambahkan Gambar :
               </label>
 
               <label className="flex items-center gap-2 border border-gray-300 w-fit px-3 py-2 bg-white cursor-pointer rounded hover:bg-gray-50 transition">
-                📷
+                <Upload size={16} />
                 <span className="text-gray-600">
                   {formData.files.length === 0 
                     ? "Tambahkan Dokumen Pendukung" 
@@ -182,9 +198,7 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
                   {formData.files.map((file, index) => (
                     <div key={index} className="flex items-center justify-between bg-white border border-gray-300 rounded-lg p-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">
-                          {file.type.startsWith("image/") ? "🖼️" : "📄"}
-                        </span>
+                        {getFileIcon(file)}
                         <span className="text-sm text-gray-700 truncate max-w-[200px] md:max-w-[400px]">
                           {file.name}
                         </span>
@@ -197,7 +211,7 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
                         onClick={() => handleRemoveFile(index)}
                         className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50 transition"
                       >
-                        ✕ Hapus
+                        <X size={14} />
                       </button>
                     </div>
                   ))}
@@ -218,19 +232,21 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <Loader2 size={18} className="animate-spin" />
                     Mengirim...
                   </>
                 ) : (
                   <>
-                    📤 Kirim Pengaduan
+                    <Send size={18} />
+                    Kirim Pengaduan
                   </>
                 )}
               </button>
 
               {submitSuccess && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center mt-3">
-                  <strong>✓ Berhasil!</strong> Pengaduan Anda telah terkirim dengan {formData.files.length} file lampiran.
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center mt-3 flex items-center justify-center gap-2">
+                  <CheckCircle size={16} />
+                  <strong>Berhasil!</strong> Pengaduan Anda telah terkirim dengan {formData.files.length} file lampiran.
                 </div>
               )}
             </div>

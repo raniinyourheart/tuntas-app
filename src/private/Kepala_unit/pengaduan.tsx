@@ -1,80 +1,130 @@
 import React, { useState } from "react";
+import { ClipboardList, Wrench, Send, FileImage } from "lucide-react";
 
-export default function FormPengaduan() {
+const Pengaduan: React.FC = () => {
+  // Data kosong - nanti dari backend
+  const [dataLaporan] = useState<any[]>([]);
+
+  const [penyebab, setPenyebab] = useState<{ [key: number]: string }>({});
+  const [rencana, setRencana] = useState<{ [key: number]: string }>({});
+
+  const handleSend = (id: number) => {
+    if (!penyebab[id] || !rencana[id]) {
+      alert("Harap isi Penyebab dan Rencana Tindak Lanjut terlebih dahulu!");
+      return;
+    }
+    alert(`Laporan ID ${id} telah dikirim ke Ka-P4M\n\nPenyebab: ${penyebab[id]}\nRencana: ${rencana[id]}`);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-200 p-6">
-      
-      {/* BUTTON NAVIGASI - TAMBAHAN */}
-      <div className="flex gap-4 mb-4">
-        <button className="bg-blue-500 text-white px-6 py-2 shadow rounded">
-          📝 Pengaduan
-        </button>
-        <button 
-          onClick={() => window.location.href = "/private/kepala_unit/pengerjaan"}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 shadow rounded transition"
-        >
-          🛠️ Pengerjaan
-        </button>
-      </div>
-
-      {/* Header */}
-      <div className="bg-slate-600 text-white p-6 border-4 border-blue-500 w-fit">
-        <h1 className="text-lg font-semibold leading-snug max-w-xl">
-          Selamat Datang Di Transformasi Tata Kelola Organisasi:
-          Aplikasi Pengelolaan Ketidaksesuaian Polibatam
-        </h1>
-      </div>
-
-      {/* Table Form */}
-      <div className="mt-8 border-2 border-gray-600">
-        {/* Header Row */}
-        <div className="grid grid-cols-4 bg-gray-100 text-sm font-semibold border-b-2 border-gray-600 text-center">
-          <div className="border-r-2 p-3">kritik atau pengaduan terkait polibatam</div>
-          <div className="border-r-2 p-3">Penyebab</div>
-          <div className="border-r-2 p-3">Rencana Tindak Lanjut</div>
-          <div className="p-3">Aksi</div>
+    <div className="min-h-screen bg-slate-100 py-10 px-4 md:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* HEADER */}
+        <div className="bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-t-2xl p-6">
+          <h1 className="text-2xl md:text-3xl font-bold leading-snug">
+            Selamat Datang Di Transformasi Tata Kelola Organisasi:
+            <br />
+            Aplikasi Pengelolaan Ketidaksesuaian Polibatam
+          </h1>
+          <p className="mt-2 text-slate-200 text-sm flex items-center gap-2">
+            <ClipboardList size={16} /> Kepala Unit - Pengaduan Masuk
+          </p>
         </div>
 
-        {/* Input Row */}
-        <div className="grid grid-cols-4">
-          {/* Kritik */}
-          <div className="border-r-2 p-4">
-            <textarea
-              className="w-full h-40 border-2 border-gray-500 p-2"
-              placeholder="Data dari civitas akan tampil di sini"
-              readOnly
-            />
-          </div>
+        {/* TAB MENU - PAKAI LUCIDE */}
+        <div className="flex gap-4 mt-6">
+          <button className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-md font-medium flex items-center gap-2">
+            <ClipboardList size={18} />
+            Pengaduan
+          </button>
+          <button
+            onClick={() => (window.location.href = "/private/kepala_unit/pengerjaan")}
+            className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-xl shadow-md font-medium transition flex items-center gap-2"
+          >
+            <Wrench size={18} />
+            Pengerjaan
+          </button>
+        </div>
 
-          {/* Penyebab */}
-          <div className="border-r-2 p-4 flex items-start justify-center">
-            <textarea
-              className="w-full h-28 border-2 border-gray-500 p-2"
-              placeholder="Isi penyebab ketidaksesuaian..."
-            />
-          </div>
+        {/* KONTEN UTAMA */}
+        <div className="mt-6 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1200px]">
+              <thead className="bg-slate-100">
+                <tr className="text-sm text-slate-700">
+                  <th className="border p-4 text-left">Kritik / Pengaduan</th>
+                  <th className="border p-4 text-left">Penyebab</th>
+                  <th className="border p-4 text-left">Rencana Tindak Lanjut</th>
+                  <th className="border p-4 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dataLaporan.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center py-20 text-slate-400">
+                      <ClipboardList size={48} className="mx-auto mb-3 opacity-50" />
+                      Belum ada pengaduan yang masuk ke unit Anda
+                    </td>
+                  </tr>
+                ) : (
+                  dataLaporan.map((item, idx) => (
+                    <tr key={item.id} className="hover:bg-slate-50 transition">
+                      {/* Kritik */}
+                      <td className="border p-4 align-top">
+                        <div className="bg-slate-100 border rounded-xl p-3 min-h-[100px] text-sm text-slate-700">
+                          {item.kritik || "(Data dari civitas akan tampil di sini)"}
+                        </div>
+                        <button className="mt-3 text-xs border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition flex items-center gap-1">
+                          <FileImage size={14} />
+                          Lihat Dokumen
+                        </button>
+                      </td>
 
-          {/* Rencana */}
-          <div className="border-r-2 p-4 flex items-start justify-center">
-            <textarea
-              className="w-full h-28 border-2 border-gray-500 p-2"
-              placeholder="Isi rencana tindak lanjut..."
-            />
-          </div>
+                      {/* Penyebab - INPUT */}
+                      <td className="border p-4 align-top">
+                        <textarea
+                          value={penyebab[item.id] || ""}
+                          onChange={(e) => setPenyebab({ ...penyebab, [item.id]: e.target.value })}
+                          className="w-full min-h-[100px] border border-slate-300 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          placeholder="Isi penyebab ketidaksesuaian..."
+                        />
+                      </td>
 
-          {/* Aksi */}
-          <div className="p-4 flex items-center justify-center">
-            <button className="bg-blue-600 text-white px-6 py-2 font-semibold rounded hover:bg-blue-700 transition">
-              SEND
-            </button>
+                      {/* Rencana Tindak Lanjut - INPUT */}
+                      <td className="border p-4 align-top">
+                        <textarea
+                          value={rencana[item.id] || ""}
+                          onChange={(e) => setRencana({ ...rencana, [item.id]: e.target.value })}
+                          className="w-full min-h-[100px] border border-slate-300 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          placeholder="Isi rencana tindak lanjut..."
+                        />
+                      </td>
+
+                      {/* Aksi - Tombol SEND */}
+                      <td className="border p-4 align-top text-center">
+                        <button
+                          onClick={() => handleSend(item.id)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium transition shadow-md flex items-center gap-2 mx-auto"
+                        >
+                          <Send size={16} />
+                          Send ke Ka-P4M
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
 
-      {/* Footer */}
-      <div className="mt-4 p-2 bg-gray-300 rounded text-xs text-gray-600 text-center">
-        📝 Kepala Unit mengisi Penyebab dan Rencana Tindak Lanjut
+        {/* FOOTER */}
+        <div className="mt-6 bg-slate-200 rounded-xl p-4 text-center text-sm text-slate-600">
+          Kepala Unit mengisi Penyebab dan Rencana Tindak Lanjut, lalu kirim ke Ka-P4M untuk direview.
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default Pengaduan;

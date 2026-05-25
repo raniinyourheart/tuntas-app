@@ -1,8 +1,17 @@
 import React, { useState } from "react";
+import {
+  ClipboardList,
+  BarChart3,
+  FileText,
+} from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Pengaduan: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [selectedUnit, setSelectedUnit] = useState("");
-  const [dataPengaduan] = useState<any[]>([]); // KOSONG
+  const [dataPengaduan] = useState<any[]>([]);
 
   const handleSend = () => {
     if (!selectedUnit) {
@@ -13,62 +22,99 @@ const Pengaduan: React.FC = () => {
     setSelectedUnit("");
   };
 
+  const tabs = [
+    {
+      id: "pengaduan",
+      label: "Pengaduan",
+      icon: <ClipboardList size={18} />,
+      path: "/private/staff_p4m/pengaduan",
+    },
+    {
+      id: "status",
+      label: "Status Pengaduan",
+      icon: <BarChart3 size={18} />,
+      path: "/private/staff_p4m/status_pengaduan",
+    },
+    {
+      id: "laporan",
+      label: "Laporan",
+      icon: <FileText size={18} />,
+      path: "/private/staff_p4m/laporan",
+    },
+  ];
+
   return (
-    <div className="bg-gray-200 min-h-screen flex justify-center py-10 px-4">
-      <div className="w-[1200px] max-w-full">
-        
-        {/* HEADER */}
-        <div className="bg-[#5B6B7C] text-white p-6 rounded-t-lg">
-          <h1 className="text-2xl font-bold leading-snug">
-            Selamat Datang Di Transformasi Tata Kelola Organisasi:
-            Aplikasi Pengelolaan Ketidaksesuaian Polibatam
-          </h1>
-          <p className="text-sm mt-2 opacity-80">
-            👑 Staff P4M - Panel Pengelolaan Pengaduan
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-100 p-6">
 
-        {/* BUTTON NAVIGASI */}
-        <div className="flex gap-4 mt-4">
-          <button className="bg-blue-500 text-white px-6 py-2 shadow rounded">
-            📝 Pengaduan
-          </button>
-          <button 
-            onClick={() => window.location.href = "/private/staff_p4m/status_pengaduan"}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 shadow rounded transition"
-          >
-            📊 Status Pengaduan
-          </button>
-          <button 
-            onClick={() => window.location.href = "/private/staff_p4m/laporan"}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 shadow rounded transition"
-          >
-            📋 Laporan
-          </button>
-        </div>
+      {/* HEADER */}
+      <div className="bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-3xl shadow-xl p-8">
+        <h1 className="text-3xl font-bold leading-snug">
+          Selamat Datang Di Transformasi Tata Kelola Organisasi:
+          <br />
+          Aplikasi Pengelolaan Ketidaksesuaian Polibatam
+        </h1>
+        <p className="mt-3 text-slate-200 text-sm">
+          👑 Staff P4M - Panel Pengelolaan Pengaduan
+        </p>
+      </div>
 
-        {/* FORM PENGADUAN - 3 KOLOM SEJAJAR */}
-        <div className="mt-6 bg-white rounded-lg shadow-md p-5">
-          <h2 className="font-bold text-gray-700 mb-3 text-lg">📋 Teruskan Pengaduan ke Unit Terkait</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            {/* Kolom Kritik/Pengaduan - READ ONLY (tidak bisa diketik) */}
+      {/* TAB MENU */}
+      <div className="flex gap-4 mt-6 overflow-x-auto pb-2">
+        {tabs.map((tab) => {
+          const isActive = location.pathname === tab.path;
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => navigate(tab.path)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all duration-300 shadow-md whitespace-nowrap
+              ${
+                isActive
+                  ? "bg-blue-600 text-white scale-105"
+                  : "bg-slate-600 text-white hover:bg-slate-700"
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* CONTENT CARD */}
+      <div className="mt-6 bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+        <div className="p-6">
+
+          <h2 className="text-xl font-bold text-slate-700 mb-6">
+            📋 Teruskan Pengaduan ke Unit Terkait
+          </h2>
+
+          {/* FORM GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+
+            {/* KOLOM 1 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kritik / Pengaduan (dari Civitas)</label>
+              <label className="block text-sm font-medium text-slate-600 mb-2">
+                Kritik / Pengaduan (dari Civitas)
+              </label>
+
               <textarea
                 readOnly
                 value="Belum ada data. Data akan tampil dari civitas."
-                className="w-full h-24 border border-gray-300 rounded-lg p-2 resize-none text-sm bg-gray-100 text-gray-500 focus:outline-none"
+                className="w-full h-28 bg-slate-100 border border-slate-200 rounded-2xl p-3 text-sm text-slate-500 resize-none"
               />
             </div>
 
-            {/* Kolom Unit Tujuan */}
+            {/* KOLOM 2 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit Yang Dituju</label>
+              <label className="block text-sm font-medium text-slate-600 mb-2">
+                Unit Yang Dituju
+              </label>
+
               <select
                 value={selectedUnit}
                 onChange={(e) => setSelectedUnit(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:outline-none focus:border-blue-500"
+                className="w-full border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-blue-400 outline-none"
               >
                 <option value="">Pilih Unit</option>
                 <option value="Unit Akademik">📚 Unit Akademik</option>
@@ -80,24 +126,24 @@ const Pengaduan: React.FC = () => {
               </select>
             </div>
 
-            {/* Kolom Tombol - SEKARANG SEJAJAR */}
-            <div>
+            {/* KOLOM 3 */}
+            <div className="flex flex-col justify-end">
               <button
                 onClick={handleSend}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg shadow transition w-full"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl shadow-md transition flex items-center justify-center gap-2"
               >
                 📤 Teruskan Pengaduan
               </button>
             </div>
           </div>
         </div>
-
-        {/* FOOTER INFO */}
-        <div className="mt-4 p-3 bg-gray-300 rounded-lg text-xs text-gray-600 text-center">
-          ⚡ Staff P4M dapat melihat semua pengaduan dari civitas dan meneruskannya ke unit terkait
-        </div>
-
       </div>
+
+      {/* FOOTER */}
+      <div className="mt-6 bg-slate-200 rounded-2xl p-4 text-center text-sm text-slate-600 shadow">
+        ⚡ Staff P4M dapat melihat semua pengaduan dan meneruskannya ke unit terkait
+      </div>
+
     </div>
   );
 };
