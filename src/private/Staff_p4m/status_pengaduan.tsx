@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   useNavigate,
   useLocation,
@@ -20,40 +20,48 @@ const StatusPengaduan: React.FC = () => {
   const location = useLocation();
 
   // STATE
-  const [statusLaporan, setStatusLaporan] = useState<{
-    [key: number]: string;
-  }>({});
-  const [komentar, setKomentar] = useState<{
-    [key: number]: string;
-  }>({});
+  const [statusLaporan, setStatusLaporan] = useState<{ [key: number]: string }>({});
+  const [komentar, setKomentar] = useState<{ [key: number]: string }>({});
   const [filterStatus, setFilterStatus] = useState<string>("semua");
   const [filterUnit, setFilterUnit] = useState<string>("semua");
-
-  // 🔴 DATA KOSONG (nanti diisi dari backend)
+  const [loading, setLoading] = useState(true);
   const [dataLaporan, setDataLaporan] = useState<any[]>([]);
 
-  // DAFTAR UNIT UNTUK FILTER
   const daftarUnit = [
-    "semua",
-    "Akademik",
-    "BMN dan Pengadaan",
-    "Career Development Center",
-    "Jurusan Elektro",
-    "K3L",
-    "Kehumasan dan Protokoler",
-    "Kemahasiswaan",
-    "Kerjasama",
-    "P4M",
-    "Perencanaan",
-    "Perpustakaan",
-    "Satgas PPKPT",
-    "Shilau",
-    "Sub Bagian Umum",
-    "UPA PP",
-    "UPA TIK",
+    "semua", "Akademik", "BMN dan Pengadaan", "Career Development Center",
+    "Jurusan Elektro", "K3L", "Kehumasan dan Protokoler", "Kemahasiswaan",
+    "Kerjasama", "P4M", "Perencanaan", "Perpustakaan", "Satgas PPKPT",
+    "Shilau", "Sub Bagian Umum", "UPA PP", "UPA TIK",
   ];
 
-  // FUNGSI HITUNG HARI TERSISA
+  // Ambil data dari backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('http://localhost:5000/api/laporan');
+        const data = await response.json();
+        const mappedData = data.map((item: any) => ({
+          id: item.id,
+          uraian: item.isi_laporan,
+          penyebab: item.penyebab,
+          rencana: item.rencana_tindak_lanjut,
+          status: item.status,
+          hasil: item.hasil_tindak_lanjut,
+          unit: item.unit_tujuan,
+          deadline: item.deadline,
+          kode_unik: item.kode_unik,
+        }));
+        setDataLaporan(mappedData);
+      } catch (error) {
+        console.error('Gagal ambil data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const hitungHariTersisa = (deadline: string): number => {
     if (!deadline) return 0;
     const today = new Date();
@@ -63,74 +71,75 @@ const StatusPengaduan: React.FC = () => {
     return diffDays;
   };
 
-  // FUNGSI DAPATKAN WARNA BERDASARKAN HARI TERSISA
   const getWarnaOverdue = (hariTersisa: number): string => {
     if (hariTersisa < 0) return "bg-red-50 border-l-4 border-l-red-500";
     if (hariTersisa <= 2) return "bg-yellow-50 border-l-4 border-l-yellow-500";
     return "";
   };
 
-  // FUNGSI DAPATKAN TEKS HARI
   const getTeksHari = (hariTersisa: number): string => {
     if (hariTersisa < 0) return `⏰ Telat ${Math.abs(hariTersisa)} hari`;
     if (hariTersisa === 0) return "⏰ Deadline hari ini!";
     return `📅 ${hariTersisa} hari lagi`;
   };
 
-  // 🔴 FUNGSI KIRIM NOTIFIKASI KE KEPALA UNIT
   const kirimNotifikasiKeKepalaUnit = (unitTujuan: string, idLaporan: number, judulLaporan: string) => {
-    // Simulasi notifikasi (nanti ganti dengan API call ke backend)
-    alert(
-      `📢 NOTIFIKASI TERKIRIM!\n\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `Kepada: Kepala Unit ${unitTujuan}\n` +
-      `Dari: Staff P4M\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `⚠️ Laporan #${idLaporan} "${judulLaporan}"\n` +
-      `SUDAH MELEWATI DEADLINE!\n\n` +
-      `Mohon segera ditindaklanjuti.\n\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `(Di sistem nyata, ini bisa kirim email/WA/notifikasi in-app)`
-    );
+    alert(`📢 NOTIFIKASI TERKIRIM!\n\nKepada: Kepala Unit ${unitTujuan}\n⚠️ Laporan #${idLaporan} "${judulLaporan}"\nSUDAH MELEWATI DEADLINE!`);
   };
 
-  // FUNGSI DAPATKAN WARNA STATUS
   const getWarnaStatus = (status: string) => {
     switch (status) {
-      case "Diterima":
-        return "bg-blue-100 text-blue-700";
-      case "Distribusi":
-        return "bg-purple-100 text-purple-700";
-      case "Diproses":
-        return "bg-yellow-100 text-yellow-700";
-      case "Review Ka-P4M":
-        return "bg-indigo-100 text-indigo-700";
-      case "Tindak Lanjut":
-        return "bg-cyan-100 text-cyan-700";
-      case "Close":
-        return "bg-green-100 text-green-700";
-      default:
-        return "bg-gray-100 text-gray-700";
+      case "Diterima": return "bg-blue-100 text-blue-700";
+      case "Distribusi": return "bg-purple-100 text-purple-700";
+      case "Diproses": return "bg-yellow-100 text-yellow-700";
+      case "Review Ka-P4M": return "bg-indigo-100 text-indigo-700";
+      case "Tindak Lanjut": return "bg-cyan-100 text-cyan-700";
+      case "Close": return "bg-green-100 text-green-700";
+      default: return "bg-gray-100 text-gray-700";
     }
   };
 
-  // FILTER DATA
-  const dataLaporanFiltered = dataLaporan.filter((item) => {
-    if (filterStatus !== "semua" && item.status !== filterStatus) return false;
-    if (filterUnit !== "semua" && item.unit !== filterUnit) return false;
-    return true;
-  });
-
-  // HANDLE CLOSE / OPEN
-  const handleCloseOpen = (id: number, action: string) => {
+  const handleCloseOpen = async (id: number, action: string) => {
     if (action === "CLOSE") {
-      setStatusLaporan({ ...statusLaporan, [id]: "CLOSED" });
-      alert(`✅ Laporan ID ${id} telah ditutup.`);
+      try {
+        const response = await fetch(`http://localhost:5000/api/laporan/${id}/close`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hasil_kesimpulan: "Laporan selesai" })
+        });
+        if (response.ok) {
+          setStatusLaporan({ ...statusLaporan, [id]: "CLOSED" });
+          alert(`✅ Laporan ID ${id} telah ditutup.`);
+          const refresh = await fetch('http://localhost:5000/api/laporan');
+          const data = await refresh.json();
+          const mappedData = data.map((item: any) => ({
+            id: item.id, uraian: item.isi_laporan, penyebab: item.penyebab,
+            rencana: item.rencana_tindak_lanjut, status: item.status,
+            hasil: item.hasil_tindak_lanjut, unit: item.unit_tujuan, deadline: item.deadline,
+          }));
+          setDataLaporan(mappedData);
+        } else { alert("❌ Gagal menutup laporan"); }
+      } catch (error) { alert("❌ Gagal, cek koneksi backend"); }
     }
     if (action === "OPEN") {
-      setStatusLaporan({ ...statusLaporan, [id]: "OPEN" });
-      const msg = komentar[id] || "Belum sesuai, perlu perbaikan dari Kepala Unit";
-      alert(`🔄 Laporan ID ${id} dibuka kembali.\nCatatan: ${msg}`);
+      try {
+        const response = await fetch(`http://localhost:5000/api/laporan/${id}/open`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ komentar: komentar[id] || "Perlu perbaikan" })
+        });
+        if (response.ok) {
+          setStatusLaporan({ ...statusLaporan, [id]: "OPEN" });
+          alert(`🔄 Laporan ID ${id} dibuka kembali.`);
+          const refresh = await fetch('http://localhost:5000/api/laporan');
+          const data = await refresh.json();
+          const mappedData = data.map((item: any) => ({
+            id: item.id, uraian: item.isi_laporan, penyebab: item.penyebab,
+            rencana: item.rencana_tindak_lanjut, status: item.status,
+            hasil: item.hasil_tindak_lanjut, unit: item.unit_tujuan, deadline: item.deadline,
+          }));
+          setDataLaporan(mappedData);
+        } else { alert("❌ Gagal membuka laporan"); }
+      } catch (error) { alert("❌ Gagal, cek koneksi backend"); }
     }
   };
 
@@ -138,16 +147,31 @@ const StatusPengaduan: React.FC = () => {
     setKomentar({ ...komentar, [id]: value });
   };
 
-  // TAB MENU
+  const dataLaporanFiltered = dataLaporan.filter((item) => {
+    if (filterStatus !== "semua" && item.status !== filterStatus) return false;
+    if (filterUnit !== "semua" && item.unit !== filterUnit) return false;
+    return true;
+  });
+
   const tabs = [
     { id: "pengaduan", label: "Pengaduan", icon: <ClipboardList size={18} />, path: "/private/staff_p4m/pengaduan" },
     { id: "status_pengaduan", label: "Status Pengaduan", icon: <BarChart3 size={18} />, path: "/private/staff_p4m/status_pengaduan" },
     { id: "laporan", label: "Laporan", icon: <FileText size={18} />, path: "/private/staff_p4m/laporan" },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500">Memuat data laporan...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 p-6">
-      {/* HEADER */}
       <div className="bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-3xl shadow-xl p-8">
         <h1 className="text-3xl font-bold leading-snug">
           Selamat Datang Di Transformasi Tata Kelola Organisasi:
@@ -157,7 +181,6 @@ const StatusPengaduan: React.FC = () => {
         <p className="mt-3 text-slate-200 text-sm">👑 Staff P4M - Status Pengaduan</p>
       </div>
 
-      {/* TAB MENU */}
       <div className="flex gap-4 mt-6 overflow-x-auto pb-2">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
@@ -175,25 +198,18 @@ const StatusPengaduan: React.FC = () => {
         })}
       </div>
 
-      {/* CONTENT */}
       <div className="mt-6 bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
         <div className="p-6">
-          {/* EXPORT & FILTER */}
           <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
             <div className="flex gap-4 text-sm text-blue-600">
               <button className="hover:underline">📄 PDF</button>
               <button className="hover:underline">📊 Excel</button>
               <button className="hover:underline">🖼 JPG</button>
             </div>
-
             <div className="flex flex-wrap gap-3 items-center">
               <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-xl">
                 <Filter size={16} className="text-slate-500" />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="bg-transparent text-sm outline-none cursor-pointer"
-                >
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-transparent text-sm outline-none cursor-pointer">
                   <option value="semua">Semua Status</option>
                   <option value="Distribusi">Distribusi</option>
                   <option value="Diproses">Diproses</option>
@@ -201,25 +217,15 @@ const StatusPengaduan: React.FC = () => {
                   <option value="Tindak Lanjut">Tindak Lanjut</option>
                 </select>
               </div>
-
               <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-xl">
                 <Search size={16} className="text-slate-500" />
-                <select
-                  value={filterUnit}
-                  onChange={(e) => setFilterUnit(e.target.value)}
-                  className="bg-transparent text-sm outline-none cursor-pointer"
-                >
-                  {daftarUnit.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit === "semua" ? "Semua Unit" : unit}
-                    </option>
-                  ))}
+                <select value={filterUnit} onChange={(e) => setFilterUnit(e.target.value)} className="bg-transparent text-sm outline-none cursor-pointer">
+                  {daftarUnit.map((unit) => (<option key={unit} value={unit}>{unit === "semua" ? "Semua Unit" : unit}</option>))}
                 </select>
               </div>
             </div>
           </div>
 
-          {/* TABLE */}
           <div className="overflow-x-auto rounded-2xl border border-slate-200">
             <table className="w-full min-w-[1600px]">
               <thead className="bg-slate-100">
@@ -238,44 +244,32 @@ const StatusPengaduan: React.FC = () => {
               </thead>
               <tbody>
                 {dataLaporanFiltered.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="text-center py-16 text-slate-400">
-                      📭 Belum ada data laporan. Silakan tunggu pengaduan dari Civitas.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={10} className="text-center py-16 text-slate-400">📭 Belum ada data laporan. Silakan tunggu pengaduan dari Civitas.</td></tr>
                 ) : (
                   dataLaporanFiltered.map((item, idx) => {
                     const hariTersisa = hitungHariTersisa(item.deadline);
                     const warnaOverdue = getWarnaOverdue(hariTersisa);
                     const teksHari = getTeksHari(hariTersisa);
-                    const isClosed = statusLaporan[item.id] === "CLOSED";
+                    const isClosed = statusLaporan[item.id] === "CLOSED" || item.status === "Close";
                     const isOverdue = hariTersisa < 0;
 
                     return (
                       <tr key={item.id} className={`hover:bg-slate-50 transition ${warnaOverdue}`}>
                         <td className="border p-3 text-center align-top">{idx + 1}</td>
                         <td className="border p-3 align-top">
-                          <div className="bg-slate-100 border rounded-xl p-3 min-h-[80px] text-sm">
-                            {item.uraian}
-                          </div>
+                          <div className="bg-slate-100 border rounded-xl p-3 min-h-[80px] text-sm">{item.uraian}</div>
                           <button className="mt-2 flex items-center gap-1 border px-2 py-1 rounded-lg text-xs hover:bg-slate-100">
                             <FileSearch size={12} /> Lihat Dokumen
                           </button>
                         </td>
                         <td className="border p-3 align-top">
-                          <div className="bg-slate-50 border rounded-xl p-3 min-h-[80px] text-sm">
-                            {item.penyebab || "(Belum diisi)"}
-                          </div>
+                          <div className="bg-slate-50 border rounded-xl p-3 min-h-[80px] text-sm">{item.penyebab || "(Belum diisi)"}</div>
                         </td>
                         <td className="border p-3 align-top">
-                          <div className="bg-slate-50 border rounded-xl p-3 min-h-[80px] text-sm">
-                            {item.rencana || "(Belum diisi)"}
-                          </div>
+                          <div className="bg-slate-50 border rounded-xl p-3 min-h-[80px] text-sm">{item.rencana || "(Belum diisi)"}</div>
                         </td>
                         <td className="border p-3 text-center align-top">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getWarnaStatus(item.status)}`}>
-                            {item.status || "Menunggu"}
-                          </span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getWarnaStatus(item.status)}`}>{item.status || "Menunggu"}</span>
                         </td>
                         <td className="border p-3 align-top">
                           <div className="bg-slate-50 border rounded-xl p-2 text-sm min-h-[80px]">
@@ -287,24 +281,16 @@ const StatusPengaduan: React.FC = () => {
                           </button>
                         </td>
                         <td className="border p-3 text-center align-top">
-                          <span className="bg-slate-100 px-2 py-1 rounded-full text-xs">
-                            {item.unit || "-"}
-                          </span>
+                          <span className="bg-slate-100 px-2 py-1 rounded-full text-xs">{item.unit || "-"}</span>
                         </td>
-                        <td className="border p-3 text-center align-top font-mono text-sm">
-                          {item.deadline || "-"}
-                        </td>
+                        <td className="border p-3 text-center align-top font-mono text-sm">{item.deadline || "-"}</td>
                         <td className="border p-3 align-top">
                           <div className="text-center">
                             <span className={`text-xs font-semibold ${hariTersisa < 0 ? "text-red-600" : hariTersisa <= 2 ? "text-yellow-600" : "text-green-600"}`}>
                               {teksHari}
                             </span>
-                            {/* 🔴 TOMBOL NOTIFIKASI (hanya muncul jika telat) */}
                             {isOverdue && !isClosed && (
-                              <button
-                                onClick={() => kirimNotifikasiKeKepalaUnit(item.unit, item.id, item.uraian)}
-                                className="mt-2 w-full bg-red-500 text-white text-xs py-1.5 px-2 rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-1"
-                              >
+                              <button onClick={() => kirimNotifikasiKeKepalaUnit(item.unit, item.id, item.uraian)} className="mt-2 w-full bg-red-500 text-white text-xs py-1.5 px-2 rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-1">
                                 <Bell size={12} /> Kirim Notifikasi
                               </button>
                             )}
@@ -313,34 +299,18 @@ const StatusPengaduan: React.FC = () => {
                         <td className="border p-3 align-top min-w-[180px]">
                           {isClosed ? (
                             <div className="space-y-2">
-                              <div className="bg-green-100 text-green-700 text-center py-1 rounded-lg text-sm font-semibold">
-                                ✓ CLOSED
-                              </div>
-                              <button
-                                onClick={() => handleCloseOpen(item.id, "OPEN")}
-                                className="w-full flex items-center justify-center gap-1 border border-yellow-500 text-yellow-600 py-1 rounded-lg text-xs hover:bg-yellow-50"
-                              >
+                              <div className="bg-green-100 text-green-700 text-center py-1 rounded-lg text-sm font-semibold">✓ CLOSED</div>
+                              <button onClick={() => handleCloseOpen(item.id, "OPEN")} className="w-full flex items-center justify-center gap-1 border border-yellow-500 text-yellow-600 py-1 rounded-lg text-xs hover:bg-yellow-50">
                                 <RotateCcw size={14} /> OPEN (Revisi)
                               </button>
                             </div>
                           ) : (
                             <div>
-                              <button
-                                onClick={() => handleCloseOpen(item.id, "CLOSE")}
-                                className="w-full flex items-center justify-center gap-1 border border-green-500 text-green-600 py-1 rounded-lg text-xs hover:bg-green-50"
-                              >
+                              <button onClick={() => handleCloseOpen(item.id, "CLOSE")} className="w-full flex items-center justify-center gap-1 border border-green-500 text-green-600 py-1 rounded-lg text-xs hover:bg-green-50">
                                 <CheckCircle2 size={14} /> CLOSE (Selesai)
                               </button>
-                              <textarea
-                                value={komentar[item.id] || ""}
-                                onChange={(e) => handleKomentarChange(item.id, e.target.value)}
-                                placeholder="Komentar jika perlu revisi..."
-                                className="w-full mt-2 border rounded-lg p-2 h-16 text-xs resize-none outline-none focus:ring-1 focus:ring-blue-400"
-                              />
-                              <button
-                                onClick={() => handleCloseOpen(item.id, "OPEN")}
-                                className="w-full mt-2 flex items-center justify-center gap-1 border border-yellow-500 text-yellow-600 py-1 rounded-lg text-xs hover:bg-yellow-50"
-                              >
+                              <textarea value={komentar[item.id] || ""} onChange={(e) => handleKomentarChange(item.id, e.target.value)} placeholder="Komentar jika perlu revisi..." className="w-full mt-2 border rounded-lg p-2 h-16 text-xs resize-none outline-none focus:ring-1 focus:ring-blue-400" />
+                              <button onClick={() => handleCloseOpen(item.id, "OPEN")} className="w-full mt-2 flex items-center justify-center gap-1 border border-yellow-500 text-yellow-600 py-1 rounded-lg text-xs hover:bg-yellow-50">
                                 <RotateCcw size={14} /> OPEN (Kembalikan)
                               </button>
                             </div>
@@ -356,7 +326,6 @@ const StatusPengaduan: React.FC = () => {
         </div>
       </div>
 
-      {/* FOOTER */}
       <div className="mt-6 bg-slate-200 rounded-2xl p-4 text-center text-sm text-slate-600 shadow">
         ⚡ Staff P4M: CLOSE jika selesai & sesuai | OPEN jika perlu perbaikan dari Kepala Unit
         <br />

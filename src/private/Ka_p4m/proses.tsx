@@ -1,39 +1,64 @@
-import React, { useState } from "react";
-import { CheckCircle2, XCircle, Send, FileImage, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { CheckCircle2, Send, FileImage, AlertCircle } from "lucide-react";
 
 const ProsesKaP4M: React.FC = () => {
-  // State untuk form
-  const [selectedTindakan, setSelectedTindakan] = useState("");
-  const [alasan, setAlasan] = useState("");
+  const [selectedTindakan, setSelectedTindakan] = useState<{ [key: number]: string }>({});
+  const [alasan, setAlasan] = useState<{ [key: number]: string }>({});
+  const [loading, setLoading] = useState(true);
+  const [dataLaporan, setDataLaporan] = useState<any[]>([]);
 
-  // Data kosong - nanti dari backend
-  const [dataLaporan] = useState<any[]>([
-    // Nanti diisi dari backend
-    // {
-    //   id: 1,
-    //   kritik: "Toilet lantai 2 rusak...",
-    //   penyebab: "Karet flush rusak",
-    //   rencana: "Ganti karet flush",
-    //   unit: "Unit Sarana",
-    //   kepalaUnit: "Budi"
-    // }
-  ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('http://localhost:5000/api/laporan');
+        const data = await response.json();
+        const perluReview = data.filter((item: any) => item.status === "Review Ka-P4M");
+        setDataLaporan(perluReview);
+      } catch (error) {
+        console.error('Gagal ambil data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  const handleSend = () => {
-    if (!selectedTindakan) {
+  const handleSend = async (id: number) => {
+    const tindakan = selectedTindakan[id];
+    if (!tindakan) {
       alert("Harap pilih tindakan terlebih dahulu!");
       return;
     }
-    if (selectedTindakan === "Tidak Setujui" && !alasan) {
+    if (tindakan === "Tidak Setujui" && !alasan[id]) {
       alert("Harap isi alasan mengapa tidak disetujui!");
       return;
     }
-    alert(
-      `Keputusan telah dikirim ke Kepala Unit\n\n` +
-      `Tindakan: ${selectedTindakan}\n` +
-      `${selectedTindakan === "Tidak Setujui" ? `Alasan: ${alasan}\n` : ""}` +
-      `\nStatus laporan akan diperbarui.`
-    );
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/laporan/${id}/keputusan`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keputusan: tindakan,
+          alasan: alasan[id] || null
+        })
+      });
+      
+      if (response.ok) {
+        alert(`✅ Keputusan telah dikirim ke Kepala Unit`);
+        const refreshResponse = await fetch('http://localhost:5000/api/laporan');
+        const refreshData = await refreshResponse.json();
+        const perluReview = refreshData.filter((item: any) => item.status === "Review Ka-P4M");
+        setDataLaporan(perluReview);
+        setSelectedTindakan({});
+        setAlasan({});
+      } else {
+        alert("❌ Gagal mengirim keputusan");
+      }
+    } catch (error) {
+      alert("❌ Gagal, cek koneksi backend");
+    }
   };
 
   const getWarnaTindakan = (tindakan: string) => {
@@ -42,10 +67,20 @@ const ProsesKaP4M: React.FC = () => {
     return "";
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-100 py-10 px-4 md:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500">Memuat data usulan...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* HEADER */}
         <div className="bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-t-2xl p-6">
           <h1 className="text-2xl md:text-3xl font-bold leading-snug">
             Selamat Datang Di Transformasi Tata Kelola Organisasi:
@@ -57,17 +92,16 @@ const ProsesKaP4M: React.FC = () => {
           </p>
         </div>
 
-        {/* KONTEN UTAMA */}
         <div className="mt-6 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1300px]">
               <thead className="bg-slate-100">
                 <tr className="text-sm text-slate-700">
-                  <th className="border p-4 text-left min-w-[250px]">Masukan Kritik / Pengaduan</th>
-                  <th className="border p-4 text-left min-w-[200px]">Penyebab <span className="text-xs text-slate-400">(Kepala Unit)</span></th>
-                  <th className="border p-4 text-left min-w-[200px]">Rencana Tindak Lanjut <span className="text-xs text-slate-400">(Kepala Unit)</span></th>
-                  <th className="border p-4 text-center min-w-[150px]">Pilih Tindakan</th>
-                  <th className="border p-4 text-left min-w-[250px]">Aksi (Ka. P4M)</th>
+                  <th className="border p-4 text-left">Masukan Kritik / Pengaduan</th>
+                  <th className="border p-4 text-left">Penyebab</th>
+                  <th className="border p-4 text-left">Rencana Tindak Lanjut</th>
+                  <th className="border p-4 text-center">Pilih Tindakan</th>
+                  <th className="border p-4 text-left">Aksi (Ka. P4M)</th>
                 </tr>
               </thead>
               <tbody>
@@ -79,93 +113,65 @@ const ProsesKaP4M: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  dataLaporan.map((item, idx) => (
+                  dataLaporan.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50 transition">
-                      {/* Kritik - READONLY */}
                       <td className="border p-4 align-top">
-                        <div className="bg-slate-100 border rounded-xl p-3 min-h-[120px] text-sm text-slate-700">
-                          {item.kritik || "(Data dari civitas akan tampil di sini)"}
+                        <div className="bg-slate-100 border rounded-xl p-3 text-sm">
+                          {item.isi_laporan || "(Data dari civitas)"}
                         </div>
-                        <button className="mt-3 text-xs border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition flex items-center gap-1">
-                          <FileImage size={14} />
-                          Lihat Dokumen
+                        <button className="mt-2 text-xs border px-2 py-1 rounded-lg">
+                          <FileImage size={12} /> Lihat Dokumen
                         </button>
                       </td>
-
-                      {/* Penyebab - READONLY */}
-                      <td className="border p-4 align-top">
-                        <div className="bg-slate-50 border rounded-xl p-3 min-h-[120px] text-sm text-slate-600">
-                          {item.penyebab || "(Belum diisi oleh Kepala Unit)"}
-                        </div>
-                      </td>
-
-                      {/* RTL - READONLY */}
-                      <td className="border p-4 align-top">
-                        <div className="bg-slate-50 border rounded-xl p-3 min-h-[120px] text-sm text-slate-600">
-                          {item.rencana || "(Belum diisi oleh Kepala Unit)"}
-                        </div>
-                      </td>
-
-                      {/* Pilih Tindakan - DROPDOWN */}
-                      <td className="border p-4 align-top">
+                      <td className="border p-4 align-top text-sm">
+                        {item.penyebab || "(Belum diisi)"}
+                       </td>
+                      <td className="border p-4 align-top text-sm">
+                        {item.rencana_tindak_lanjut || "(Belum diisi)"}
+                       </td>
+                      <td className="border p-4 align-top text-center">
                         <select
-                          value={selectedTindakan}
-                          onChange={(e) => setSelectedTindakan(e.target.value)}
-                          className={`w-full border rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${getWarnaTindakan(selectedTindakan)}`}
+                          value={selectedTindakan[item.id] || ""}
+                          onChange={(e) => setSelectedTindakan({ ...selectedTindakan, [item.id]: e.target.value })}
+                          className={`border rounded-lg p-2 text-sm w-40 ${getWarnaTindakan(selectedTindakan[item.id])}`}
                         >
-                          <option value="" className="text-gray-500">Pilih Tindakan</option>
-                          <option value="Setujui" className="text-green-600">✓ Setujui</option>
-                          <option value="Tidak Setujui" className="text-red-600">✗ Tidak Setujui</option>
+                          <option value="">Pilih Tindakan</option>
+                          <option value="Setujui">✓ Setujui</option>
+                          <option value="Tidak Setujui">✗ Tidak Setujui</option>
                         </select>
-                        <p className="text-xs text-slate-400 mt-2">
-                          {selectedTindakan === "Setujui" && "Kepala Unit akan melanjutkan ke eksekusi"}
-                          {selectedTindakan === "Tidak Setujui" && "Berikan alasan, Kepala Unit akan revisi"}
+                        <p className="text-xs text-slate-400 mt-1">
+                          {selectedTindakan[item.id] === "Setujui" && "Kepala Unit akan eksekusi"}
+                          {selectedTindakan[item.id] === "Tidak Setujui" && "Wajib isi alasan"}
                         </p>
-                      </td>
-
-                      {/* Aksi Ka. P4M - INPUT TEXTAREA */}
+                       </td>
                       <td className="border p-4 align-top">
                         <textarea
-                          value={alasan}
-                          onChange={(e) => setAlasan(e.target.value)}
-                          className="w-full min-h-[100px] border border-slate-300 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          placeholder={
-                            selectedTindakan === "Setujui"
-                              ? "Isi catatan tambahan (opsional)..."
-                              : "Wajib isi alasan mengapa tidak disetujui..."
-                          }
+                          value={alasan[item.id] || ""}
+                          onChange={(e) => setAlasan({ ...alasan, [item.id]: e.target.value })}
+                          className="w-full border rounded-lg p-2 text-sm resize-none"
+                          rows={3}
+                          placeholder="Isi alasan..."
                         />
-                        {selectedTindakan === "Tidak Setujui" && !alasan && (
-                          <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                            <AlertCircle size={12} /> Alasan wajib diisi jika tidak setujui
-                          </p>
+                        {selectedTindakan[item.id] === "Tidak Setujui" && !alasan[item.id] && (
+                          <p className="text-xs text-red-500 mt-1">⚠️ Alasan wajib diisi</p>
                         )}
-                      </td>
+                        <button
+                          onClick={() => handleSend(item.id)}
+                          className="mt-2 w-full bg-blue-600 text-white py-2 rounded-lg text-sm"
+                        >
+                          <Send size={14} /> Kirim
+                        </button>
+                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-
-          {/* TOMBOL SEND DI BAWAH */}
-          {dataLaporan.length > 0 && (
-            <div className="p-4 border-t border-slate-200 flex justify-end bg-slate-50">
-              <button
-                onClick={handleSend}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-medium transition shadow-md flex items-center gap-2"
-              >
-                <Send size={18} />
-                Send ke Kepala Unit
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* FOOTER */}
         <div className="mt-6 bg-slate-200 rounded-xl p-4 text-center text-sm text-slate-600">
-          <CheckCircle2 size={14} className="inline mr-1" /> Ka. P4M menentukan tindakan (Setujui / Tidak Setujui).
-          Jika Tidak Setujui, wajib memberikan alasan untuk revisi oleh Kepala Unit.
+          Ka. P4M menentukan tindakan (Setujui / Tidak Setujui)
         </div>
       </div>
     </div>

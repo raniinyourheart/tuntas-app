@@ -18,6 +18,7 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
   const [imageError, setImageError] = useState(false);
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -36,7 +37,7 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
       const availableSlots = maxFiles - currentCount;
       
       if (newFiles.length > availableSlots) {
-        alert(`Maksimal upload ${maxFiles} gambar. Saat ini sudah ${currentCount} file. Bisa upload ${availableSlots} file lagi.`);
+        alert(`Maksimal upload ${maxFiles} file. Saat ini sudah ${currentCount} file.`);
         return;
       }
       
@@ -55,29 +56,49 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.status || !formData.pesan) {
       alert("Harap isi semua field yang diperlukan!");
       return;
     }
+    
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitSuccess(true);
-      setFormData({ status: "", pesan: "", files: [] });
-      setTimeout(() => setSubmitSuccess(false), 3000);
-    }, 1500);
-  };
-
-  const getFileIcon = (file: File) => {
-    if (file.type.startsWith("image/")) return <Image size={16} />;
-    return <File size={16} />;
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/laporan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status_pengirim: formData.status,
+          isi_laporan: formData.pesan,
+          file_path: null
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        setSubmitSuccess(true);
+        setSubmitMessage(`✅ Laporan berhasil dikirim! Kode unik: ${result.kode_unik}`);
+        setFormData({ status: "", pesan: "", files: [] });
+        setTimeout(() => {
+          setSubmitSuccess(false);
+          setSubmitMessage("");
+        }, 5000);
+      } else {
+        alert(`Gagal: ${result.error || 'Terjadi kesalahan'}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert("Gagal mengirim laporan. Pastikan backend berjalan di http://localhost:5000");
+    }
+    
+    setIsSubmitting(false);
   };
 
   return (
     <div className="min-h-screen relative py-10 px-4 md:px-8">
-      {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-black/40 z-10"></div>
         {!imageError ? (
@@ -93,7 +114,6 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
       </div>
 
       <div className="max-w-5xl mx-auto relative z-20">
-        {/* HEADER */}
         <div className="bg-slate-600/80 backdrop-blur-sm text-white p-6 rounded-t-lg">
           <h1 className="text-2xl md:text-3xl font-bold leading-snug">
             Selamat Datang Di Transformasi Tata Kelola Organisasi:
@@ -102,7 +122,6 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
           <p className="mt-2 text-sm md:text-base">
             Anda dapat memberi masukan, kritik dan/atau pengaduan terkait polibatam secara online
           </p>
-          
           <div className="mt-3">
             <button
               onClick={onBackToHome}
@@ -114,7 +133,6 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
           </div>
         </div>
 
-        {/* BUTTON NAVIGASI */}
         <div className="flex gap-4 mt-4">
           <button 
             onClick={handleResetForm}
@@ -132,11 +150,9 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
           </button>
         </div>
 
-        {/* FORM */}
         <form onSubmit={handleSubmit}>
           <div className="border border-gray-300 mt-4 p-6 bg-white/95 backdrop-blur-sm rounded-b-lg shadow-xl">
             
-            {/* INPUT STATUS */}
             <div className="flex flex-col sm:flex-row sm:items-center mb-6">
               <label className="w-40 font-medium mb-2 sm:mb-0 flex items-center gap-2">
                 <User size={16} />
@@ -155,7 +171,6 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
               </select>
             </div>
 
-            {/* TEXTAREA */}
             <div className="mb-6">
               <label className="block mb-2 font-medium flex items-center gap-2">
                 <MessageSquare size={16} />
@@ -170,19 +185,17 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
               />
             </div>
 
-            {/* UPLOAD GAMBAR */}
             <div className="mb-6">
               <label className="block mb-2 font-medium flex items-center gap-2">
                 <Paperclip size={16} />
-                Tambahkan Gambar :
+                Tambahkan File :
               </label>
-
               <label className="flex items-center gap-2 border border-gray-300 w-fit px-3 py-2 bg-white cursor-pointer rounded hover:bg-gray-50 transition">
                 <Upload size={16} />
                 <span className="text-gray-600">
                   {formData.files.length === 0 
                     ? "Tambahkan Dokumen Pendukung" 
-                    : `+ Tambah gambar lagi (${formData.files.length}/3)`}
+                    : `+ Tambah file lagi (${formData.files.length}/3)`}
                 </span>
                 <input 
                   type="file" 
@@ -192,38 +205,25 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
                   multiple
                 />
               </label>
-
               {formData.files.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {formData.files.map((file, index) => (
                     <div key={index} className="flex items-center justify-between bg-white border border-gray-300 rounded-lg p-2">
                       <div className="flex items-center gap-2">
-                        {getFileIcon(file)}
-                        <span className="text-sm text-gray-700 truncate max-w-[200px] md:max-w-[400px]">
-                          {file.name}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          ({(file.size / 1024).toFixed(1)} KB)
-                        </span>
+                        {file.type.startsWith("image/") ? <Image size={16} /> : <File size={16} />}
+                        <span className="text-sm text-gray-700 truncate max-w-[200px]">{file.name}</span>
+                        <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile(index)}
-                        className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50 transition"
-                      >
+                      <button type="button" onClick={() => handleRemoveFile(index)} className="text-red-500 hover:text-red-700">
                         <X size={14} />
                       </button>
                     </div>
                   ))}
                 </div>
               )}
-
-              <p className="text-xs text-red-500 mt-1">
-                *Gambar Hanya Mendukung : PDF, PNG, JPG (Maksimal 3 file)
-              </p>
+              <p className="text-xs text-red-500 mt-1">*File Mendukung : PDF, PNG, JPG (Maksimal 3 file)</p>
             </div>
 
-            {/* TOMBOL KIRIM */}
             <div className="mt-6">
               <button
                 type="submit"
@@ -231,29 +231,19 @@ const Pengaduan: React.FC<PengaduanProps> = ({ onBackToHome, onNavigateToStatus 
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isSubmitting ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Mengirim...
-                  </>
+                  <><Loader2 size={18} className="animate-spin" /> Mengirim...</>
                 ) : (
-                  <>
-                    <Send size={18} />
-                    Kirim Pengaduan
-                  </>
+                  <><Send size={18} /> Kirim Pengaduan</>
                 )}
               </button>
-
               {submitSuccess && (
                 <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center mt-3 flex items-center justify-center gap-2">
-                  <CheckCircle size={16} />
-                  <strong>Berhasil!</strong> Pengaduan Anda telah terkirim dengan {formData.files.length} file lampiran.
+                  <CheckCircle size={16} /> {submitMessage}
                 </div>
               )}
             </div>
-
           </div>
         </form>
-
       </div>
     </div>
   );

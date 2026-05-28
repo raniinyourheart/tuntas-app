@@ -1,20 +1,80 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ClipboardList, Wrench, Send, FileImage } from "lucide-react";
 
 const Pengaduan: React.FC = () => {
-  // Data kosong - nanti dari backend
-  const [dataLaporan] = useState<any[]>([]);
-
+  const [dataLaporan, setDataLaporan] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [penyebab, setPenyebab] = useState<{ [key: number]: string }>({});
   const [rencana, setRencana] = useState<{ [key: number]: string }>({});
 
-  const handleSend = (id: number) => {
+  const unitSaya = "Sarana";
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`http://localhost:5000/api/laporan/unit/${unitSaya}`);
+        const data = await response.json();
+        const perluDiisi = data.filter((item: any) => item.status === "Distribusi");
+        setDataLaporan(perluDiisi);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleSend = async (id: number) => {
     if (!penyebab[id] || !rencana[id]) {
       alert("Harap isi Penyebab dan Rencana Tindak Lanjut terlebih dahulu!");
       return;
     }
-    alert(`Laporan ID ${id} telah dikirim ke Ka-P4M\n\nPenyebab: ${penyebab[id]}\nRencana: ${rencana[id]}`);
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/laporan/${id}/penyebab-rtl`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          penyebab: penyebab[id],
+          rencana_tindak_lanjut: rencana[id]
+        })
+      });
+      
+      if (response.ok) {
+        alert(`✅ Laporan ID ${id} telah dikirim ke Ka-P4M`);
+        const refresh = await fetch(`http://localhost:5000/api/laporan/unit/${unitSaya}`);
+        const refreshData = await refresh.json();
+        setDataLaporan(refreshData.filter((item: any) => item.status === "Distribusi"));
+        setPenyebab((prev) => {
+          const newState = { ...prev };
+          delete newState[id];
+          return newState;
+        });
+        setRencana((prev) => {
+          const newState = { ...prev };
+          delete newState[id];
+          return newState;
+        });
+      } else {
+        alert("❌ Gagal mengirim ke Ka-P4M");
+      }
+    } catch (error) {
+      alert("❌ Gagal, cek koneksi backend");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-100 py-10 px-4 md:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500">Memuat data laporan...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4 md:px-8">
@@ -31,25 +91,23 @@ const Pengaduan: React.FC = () => {
           </p>
         </div>
 
-        {/* TAB MENU - PAKAI LUCIDE */}
+        {/* TAB MENU */}
         <div className="flex gap-4 mt-6">
           <button className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-md font-medium flex items-center gap-2">
-            <ClipboardList size={18} />
-            Pengaduan
+            <ClipboardList size={18} /> Pengaduan
           </button>
           <button
             onClick={() => (window.location.href = "/private/kepala_unit/pengerjaan")}
             className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-xl shadow-md font-medium transition flex items-center gap-2"
           >
-            <Wrench size={18} />
-            Pengerjaan
+            <Wrench size={18} /> Pengerjaan
           </button>
         </div>
 
-        {/* KONTEN UTAMA */}
+        {/* KONTEN */}
         <div className="mt-6 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1200px]">
+            <table className="w-full min-w-[900px]">
               <thead className="bg-slate-100">
                 <tr className="text-sm text-slate-700">
                   <th className="border p-4 text-left">Kritik / Pengaduan</th>
@@ -67,47 +125,40 @@ const Pengaduan: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  dataLaporan.map((item, idx) => (
+                  dataLaporan.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50 transition">
-                      {/* Kritik */}
                       <td className="border p-4 align-top">
-                        <div className="bg-slate-100 border rounded-xl p-3 min-h-[100px] text-sm text-slate-700">
-                          {item.kritik || "(Data dari civitas akan tampil di sini)"}
+                        <div className="bg-slate-100 border rounded-xl p-3 text-sm">
+                          {item.isi_laporan || "(Data dari civitas)"}
                         </div>
-                        <button className="mt-3 text-xs border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition flex items-center gap-1">
-                          <FileImage size={14} />
-                          Lihat Dokumen
+                        <button className="mt-2 text-xs border px-2 py-1 rounded-lg">
+                          <FileImage size={12} /> Lihat Dokumen
                         </button>
                       </td>
-
-                      {/* Penyebab - INPUT */}
-                      <td className="border p-4 align-top">
+                      <td className="border p-4">
                         <textarea
                           value={penyebab[item.id] || ""}
                           onChange={(e) => setPenyebab({ ...penyebab, [item.id]: e.target.value })}
-                          className="w-full min-h-[100px] border border-slate-300 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          placeholder="Isi penyebab ketidaksesuaian..."
+                          className="w-full border rounded-xl p-2 text-sm resize-none"
+                          rows={3}
+                          placeholder="Isi penyebab..."
                         />
                       </td>
-
-                      {/* Rencana Tindak Lanjut - INPUT */}
-                      <td className="border p-4 align-top">
+                      <td className="border p-4">
                         <textarea
                           value={rencana[item.id] || ""}
                           onChange={(e) => setRencana({ ...rencana, [item.id]: e.target.value })}
-                          className="w-full min-h-[100px] border border-slate-300 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          className="w-full border rounded-xl p-2 text-sm resize-none"
+                          rows={3}
                           placeholder="Isi rencana tindak lanjut..."
                         />
                       </td>
-
-                      {/* Aksi - Tombol SEND */}
-                      <td className="border p-4 align-top text-center">
+                      <td className="border p-4 text-center">
                         <button
                           onClick={() => handleSend(item.id)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium transition shadow-md flex items-center gap-2 mx-auto"
+                          className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm"
                         >
-                          <Send size={16} />
-                          Send ke Ka-P4M
+                          <Send size={14} /> Send
                         </button>
                       </td>
                     </tr>
@@ -118,9 +169,8 @@ const Pengaduan: React.FC = () => {
           </div>
         </div>
 
-        {/* FOOTER */}
         <div className="mt-6 bg-slate-200 rounded-xl p-4 text-center text-sm text-slate-600">
-          Kepala Unit mengisi Penyebab dan Rencana Tindak Lanjut, lalu kirim ke Ka-P4M untuk direview.
+          Kepala Unit mengisi Penyebab dan Rencana Tindak Lanjut
         </div>
       </div>
     </div>

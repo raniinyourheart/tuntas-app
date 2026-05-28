@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import {
@@ -13,8 +13,9 @@ const Laporan: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // EMPTY DATA (backend nanti isi)
-  const dataLaporan: any[] = [];
+  // 👇 DIGANTI: dari data dummy jadi state dari backend
+  const [dataLaporan, setDataLaporan] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const tabs = [
     {
@@ -37,10 +38,50 @@ const Laporan: React.FC = () => {
     },
   ];
 
+  // 👇 TAMBAHAN: ambil data dari backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('http://localhost:5000/api/laporan');
+        const data = await response.json();
+        // Filter hanya yang status Close
+        const laporanClose = data.filter((item: any) => item.status === "Close");
+        setDataLaporan(laporanClose);
+      } catch (error) {
+        console.error('Gagal ambil data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // 👇 TAMBAHAN: fungsi export (sementara alert)
+  const handleExport = (format: string) => {
+    if (dataLaporan.length === 0) {
+      alert("Tidak ada data untuk diekspor!");
+      return;
+    }
+    alert(`📊 Ekspor ke ${format} (${dataLaporan.length} data)`);
+  };
+
+  // 👇 TAMBAHAN: loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500">Memuat data laporan...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 p-6">
 
-      {/* HEADER */}
+      {/* HEADER - SAMA PERSIS */}
       <div className="bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-3xl shadow-xl p-8">
         <h1 className="text-3xl font-bold leading-snug">
           Selamat Datang Di Transformasi Tata Kelola Organisasi:
@@ -53,7 +94,7 @@ const Laporan: React.FC = () => {
         </p>
       </div>
 
-      {/* TAB */}
+      {/* TAB - SAMA PERSIS */}
       <div className="flex gap-4 mt-6 overflow-x-auto pb-2">
         {tabs.map((tab) => {
           const isActive = location.pathname.includes(tab.id);
@@ -76,33 +117,42 @@ const Laporan: React.FC = () => {
         })}
       </div>
 
-      {/* CONTENT */}
+      {/* CONTENT - SAMA PERSIS */}
       <div className="mt-6 bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
 
-        {/* EXPORT */}
+        {/* EXPORT - DIUBAH Dikit biar bisa export */}
         <div className="flex justify-end gap-4 p-6 border-b text-sm">
-          <button className="flex items-center gap-2 text-blue-600 hover:underline">
+          <button 
+            onClick={() => handleExport("PDF")}
+            className="flex items-center gap-2 text-blue-600 hover:underline"
+          >
             <Download size={16} />
             PDF
           </button>
 
-          <button className="flex items-center gap-2 text-green-600 hover:underline">
+          <button 
+            onClick={() => handleExport("Excel")}
+            className="flex items-center gap-2 text-green-600 hover:underline"
+          >
             <Download size={16} />
             Excel
           </button>
 
-          <button className="flex items-center gap-2 text-orange-500 hover:underline">
+          <button 
+            onClick={() => handleExport("JPG")}
+            className="flex items-center gap-2 text-orange-500 hover:underline"
+          >
             <Download size={16} />
             JPG
           </button>
         </div>
 
-        {/* TABLE */}
+        {/* TABLE - SAMA PERSIS */}
         <div className="overflow-x-auto">
 
           <table className="w-full min-w-[1200px] border-collapse">
 
-            {/* HEADER TABLE */}
+            {/* HEADER TABLE - SAMA PERSIS */}
             <thead className="bg-slate-100">
               <tr className="text-slate-700 text-sm">
                 <th className="border p-4 text-center">No</th>
@@ -114,7 +164,7 @@ const Laporan: React.FC = () => {
               </tr>
             </thead>
 
-            {/* BODY TABLE */}
+            {/* BODY TABLE - ISI DARI BACKEND */}
             <tbody>
 
               {dataLaporan.length === 0 ? (
@@ -135,8 +185,8 @@ const Laporan: React.FC = () => {
                     </td>
 
                     <td className="border p-4">
-                      <div className="bg-slate-50 border rounded-xl p-3 h-28">
-                        {item.uraian}
+                      <div className="bg-slate-50 border rounded-xl p-3 h-28 overflow-auto">
+                        {item.isi_laporan || "-"}
                       </div>
 
                       <button className="mt-4 flex items-center gap-2 border px-4 py-2 rounded-xl hover:bg-slate-100 text-sm">
@@ -146,26 +196,26 @@ const Laporan: React.FC = () => {
                     </td>
 
                     <td className="border p-4">
-                      <div className="bg-slate-50 border rounded-xl p-3 h-28">
-                        {item.penyebab}
+                      <div className="bg-slate-50 border rounded-xl p-3 h-28 overflow-auto">
+                        {item.penyebab || "-"}
                       </div>
                     </td>
 
                     <td className="border p-4">
-                      <div className="bg-slate-50 border rounded-xl p-3 h-28">
-                        {item.rencana}
+                      <div className="bg-slate-50 border rounded-xl p-3 h-28 overflow-auto">
+                        {item.rencana_tindak_lanjut || "-"}
                       </div>
                     </td>
 
                     <td className="border p-4 text-center">
-                      <span className="bg-gray-200 text-gray-600 px-4 py-1 rounded-full text-sm">
-                        -
+                      <span className="bg-green-100 text-green-700 px-4 py-1 rounded-full text-sm">
+                        {item.status || "Close"}
                       </span>
                     </td>
 
                     <td className="border p-4">
-                      <div className="bg-slate-50 border rounded-xl p-3 h-32 text-sm text-slate-500">
-                        -
+                      <div className="bg-slate-50 border rounded-xl p-3 h-32 text-sm overflow-auto">
+                        {item.hasil_tindak_lanjut || "-"}
                       </div>
                     </td>
 
@@ -181,9 +231,9 @@ const Laporan: React.FC = () => {
 
       </div>
 
-      {/* FOOTER */}
+      {/* FOOTER - SAMA PERSIS */}
       <div className="mt-6 bg-slate-200 rounded-2xl p-4 text-center text-sm text-slate-600 shadow">
-        ⚡ Halaman ini akan otomatis terisi dari backend
+        ⚡ Data laporan yang sudah Close akan muncul di sini
       </div>
 
     </div>

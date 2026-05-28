@@ -1,14 +1,49 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ClipboardList, Wrench, Send, FileImage, Calendar, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
 const Pengerjaan: React.FC = () => {
   // State untuk form
-  const [tanggal, setTanggal] = useState("");
-  const [uraian, setUraian] = useState("");
-  const [gambar, setGambar] = useState<File | null>(null);
+  const [tanggal, setTanggal] = useState<{ [key: number]: string }>({});
+  const [uraian, setUraian] = useState<{ [key: number]: string }>({});
+  const [gambar, setGambar] = useState<{ [key: number]: File | null }>({});
+  const [loading, setLoading] = useState(true);
 
-  // Data kosong - nanti dari backend
-  const [dataLaporan] = useState<any[]>([]);
+  // 👇 DIGANTI: dari data dummy jadi state dari backend
+  const [dataLaporan, setDataLaporan] = useState<any[]>([]);
+
+  // Sementara hardcode unit (nanti ambil dari login)
+  const unitSaya = "Sarana";
+
+  // 👇 TAMBAHAN: ambil data dari backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`http://localhost:5000/api/laporan/unit/${unitSaya}`);
+        const data = await response.json();
+        // Filter laporan yang statusnya "Tindak Lanjut" (disetujui Ka-P4M)
+        const perluDikerjakan = data.filter((item: any) => item.status === "Tindak Lanjut");
+        
+        // Mapping data dari backend ke format yang dipakai frontend
+        const mappedData = perluDikerjakan.map((item: any) => ({
+          id: item.id,
+          kritik: item.isi_laporan,
+          penyebab: item.penyebab,
+          rencana: item.rencana_tindak_lanjut,
+          status: item.status === "Tindak Lanjut" ? "Disetujui" : item.status,
+          deadline: item.deadline,
+          unit: item.unit_tujuan,
+          kode_unik: item.kode_unik,
+        }));
+        setDataLaporan(mappedData);
+      } catch (error) {
+        console.error('Gagal ambil data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Fungsi hitung sisa hari
   const hitungSisaHari = (deadline: string) => {
@@ -40,23 +75,84 @@ const Pengerjaan: React.FC = () => {
     return `Sisa ${sisaHari} hari`;
   };
 
-  const handleSend = () => {
-    if (!tanggal || !uraian) {
+  // 👇 UBAH: handleSend jadi async dan panggil API
+  const handleSend = async (id: number) => {
+    if (!tanggal[id] || !uraian[id]) {
       alert("Harap isi tanggal dan uraian hasil tindak lanjut!");
       return;
     }
-    alert(
-      `Hasil pengerjaan telah dikirim ke Staff P4M\n\n` +
-      `Tanggal: ${tanggal}\n` +
-      `Uraian: ${uraian}\n` +
-      `Gambar: ${gambar ? gambar.name : "Tidak ada"}`
-    );
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/laporan/${id}/hasil`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hasil_tindak_lanjut: uraian[id],
+          tanggal_pengerjaan: tanggal[id]
+        })
+      });
+      
+      if (response.ok) {
+        alert(`✅ Hasil pengerjaan laporan ID ${id} telah dikirim ke Staff P4M`);
+        // Refresh data
+        const refreshResponse = await fetch(`http://localhost:5000/api/laporan/unit/${unitSaya}`);
+        const refreshData = await refreshResponse.json();
+        const perluDikerjakan = refreshData.filter((item: any) => item.status === "Tindak Lanjut");
+        const mappedData = perluDikerjakan.map((item: any) => ({
+          id: item.id,
+          kritik: item.isi_laporan,
+          penyebab: item.penyebab,
+          rencana: item.rencana_tindak_lanjut,
+          status: item.status === "Tindak Lanjut" ? "Disetujui" : item.status,
+          deadline: item.deadline,
+          unit: item.unit_tujuan,
+        }));
+        setDataLaporan(mappedData);
+        // Reset form untuk laporan yang sudah dikirim
+        setTanggal((prev) => {
+          const newState = { ...prev };
+          delete newState[id];
+          return newState;
+        });
+        setUraian((prev) => {
+          const newState = { ...prev };
+          delete newState[id];
+          return newState;
+        });
+        setGambar((prev) => {
+          const newState = { ...prev };
+          delete newState[id];
+          return newState;
+        });
+      } else {
+        alert("❌ Gagal mengirim hasil pengerjaan");
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert("❌ Gagal, cek koneksi backend");
+    }
   };
+
+  const handleFileChange = (id: number, file: File | null) => {
+    setGambar({ ...gambar, [id]: file });
+  };
+
+  // 👇 TAMBAHAN: loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-100 py-10 px-4 md:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500">Memuat data laporan...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* HEADER */}
+        {/* HEADER - SAMA PERSIS */}
         <div className="bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-t-2xl p-6">
           <h1 className="text-2xl md:text-3xl font-bold leading-snug">
             Selamat Datang Di Transformasi Tata Kelola Organisasi:
@@ -68,7 +164,7 @@ const Pengerjaan: React.FC = () => {
           </p>
         </div>
 
-        {/* TAB MENU - PAKAI LUCIDE */}
+        {/* TAB MENU - SAMA PERSIS */}
         <div className="flex gap-4 mt-6">
           <button
             onClick={() => (window.location.href = "/private/kepala_unit/pengaduan")}
@@ -83,7 +179,7 @@ const Pengerjaan: React.FC = () => {
           </button>
         </div>
 
-        {/* KONTEN UTAMA */}
+        {/* KONTEN UTAMA - SAMA PERSIS */}
         <div className="mt-6 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1300px]">
@@ -174,8 +270,8 @@ const Pengerjaan: React.FC = () => {
                               </label>
                               <input
                                 type="date"
-                                value={tanggal}
-                                onChange={(e) => setTanggal(e.target.value)}
+                                value={tanggal[item.id] || ""}
+                                onChange={(e) => setTanggal({ ...tanggal, [item.id]: e.target.value })}
                                 className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                               />
                             </div>
@@ -186,8 +282,8 @@ const Pengerjaan: React.FC = () => {
                                 <ClipboardList size={12} /> Uraian Hasil Tindak Lanjut
                               </label>
                               <textarea
-                                value={uraian}
-                                onChange={(e) => setUraian(e.target.value)}
+                                value={uraian[item.id] || ""}
+                                onChange={(e) => setUraian({ ...uraian, [item.id]: e.target.value })}
                                 className="w-full min-h-[80px] border border-slate-300 rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
                                 placeholder="Isi hasil pengerjaan..."
                               />
@@ -206,16 +302,16 @@ const Pengerjaan: React.FC = () => {
                                     type="file"
                                     className="hidden"
                                     accept=".jpg,.png,.jpeg,.pdf"
-                                    onChange={(e) => setGambar(e.target.files?.[0] || null)}
+                                    onChange={(e) => handleFileChange(item.id, e.target.files?.[0] || null)}
                                   />
                                 </label>
-                                {gambar && <span className="text-xs text-green-600 truncate">✓ {gambar.name}</span>}
+                                {gambar[item.id] && <span className="text-xs text-green-600 truncate">✓ {gambar[item.id]?.name}</span>}
                               </div>
                             </div>
 
                             {/* Tombol SEND */}
                             <button
-                              onClick={handleSend}
+                              onClick={() => handleSend(item.id)}
                               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition shadow-md flex items-center justify-center gap-2 mt-3"
                             >
                               <Send size={16} />
@@ -223,7 +319,7 @@ const Pengerjaan: React.FC = () => {
                             </button>
                           </div>
                         </td>
-                      </tr>
+                       </tr>
                     );
                   })
                 )}
@@ -232,7 +328,7 @@ const Pengerjaan: React.FC = () => {
           </div>
         </div>
 
-        {/* FOOTER */}
+        {/* FOOTER - SAMA PERSIS */}
         <div className="mt-6 bg-slate-200 rounded-xl p-4 text-center text-sm text-slate-600">
           <Wrench size={14} className="inline mr-1" /> Kepala Unit mengisi Tanggal, Uraian Hasil, dan Dokumentasi.
           {dataLaporan.length > 0 && " Perhatikan deadline! Jika terlambat, Staff P4M akan mengirim notifikasi."}
